@@ -136,6 +136,17 @@ Worker service:
 - `BQ_TABLE=<table>`
 - `HEATMAP_BUCKET=<app-bucket>`
 
+### Pub/Sub Wiring
+
+The async flow also needs a Pub/Sub push subscription that targets the worker Cloud Run service:
+
+```text
+topic: projects/<PROJECT_ID>/topics/nailai-infer
+push endpoint: https://<WORKER_SERVICE_URL>/
+```
+
+If you recreate the environment from scratch, make sure the subscription exists before testing `/submit`, otherwise jobs will stay `PENDING` because nothing consumes the published message.
+
 Expected private bucket layout:
 
 ```text

@@ -32,7 +32,9 @@ backend/models/*.onnx
 backend/models/*.json
 backend/models/
 
-frontend/static/models/
+frontend/static/models/*
+!frontend/static/models/
+!frontend/static/models/hand_landmarker.task
 
 artifacts/generated/
 backend/artifacts/generated/

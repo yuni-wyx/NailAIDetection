@@ -1,0 +1,16 @@
+# Keep Cloud Run source uploads small. The backend Dockerfile only needs these
+# application directories plus the root Dockerfile and requirements files.
+.git/
+.github/
+docs/
+infra/
+scripts/
+worker/
+Training/
+monitoring/
+*.ipynb
+*.log
+__pycache__/
+**/__pycache__/
+*.pyc
+.DS_Store

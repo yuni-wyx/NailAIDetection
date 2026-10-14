@@ -15,6 +15,7 @@ const BOX_H_RATIO = 0.50;
 // MediaPipe state
 let handLandmarker = null;
 let running = false;
+let cameraStream = null;
 
 /**
  * Compute the centered ROI box in video/canvas pixel space.
@@ -117,14 +118,18 @@ async function loop() {
  * Initialize camera, size the overlay to video resolution, and create the hand landmarker.
  */
 async function init() {
-  // Request camera stream
-  const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                  facingMode: { ideal: "environment" }
-                }
-              });
+  window.__setModelLoadingState?.("camera", "Requesting camera access…");
 
-  video.srcObject = stream;
+  // Request camera stream
+  if (!cameraStream) {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" }
+      }
+    });
+  }
+
+  video.srcObject = cameraStream;
 
   // Ensure metadata is loaded so we know the actual dimensions
   await new Promise((resolve) => (video.onloadedmetadata = resolve));
@@ -143,10 +148,12 @@ async function init() {
   // ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   // Load MediaPipe Tasks runtime and hand model
+  window.__setModelLoadingState?.("vision", "Loading AI vision runtime…");
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
   );
 
+  window.__setModelLoadingState?.("model", "Loading hand landmark model…");
   handLandmarker = await HandLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath:
@@ -157,6 +164,7 @@ async function init() {
   });
 
   running = true;
+  window.__setModelLoadingState?.("ready");
   if (statusEl) statusEl.textContent = "Camera ready. Align your nail in the box.";
   requestAnimationFrame(loop);
 }
@@ -164,5 +172,6 @@ async function init() {
 // Bootstrap and basic error reporting
 init().catch((e) => {
   console.error(e);
+  window.__setModelLoadingState?.("error", e?.message || "Camera or model initialization failed.");
   if (statusEl) statusEl.textContent = "Init failed.";
 });

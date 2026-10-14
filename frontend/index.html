@@ -8,13 +8,38 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/css/style.css" />
   <script>
+    const configuredHandLandmarkerModelUrl = "__HAND_LANDMARKER_MODEL_URL__";
     window.__APP_CONFIG = {
-      handLandmarkerModelUrl: "__HAND_LANDMARKER_MODEL_URL__"
+      // Cloud Run replaces the placeholder at runtime. Local static hosting
+      // does not, so use the checked-in model path as a development fallback.
+      handLandmarkerModelUrl: configuredHandLandmarkerModelUrl.startsWith("__")
+        ? "/static/models/hand_landmarker.task"
+        : configuredHandLandmarkerModelUrl
     };
   </script>
 </head>
 
 <body class="bg-gray-50 font-sans text-gray-800">
+  <!-- Initial model loading state. The overlay is removed after MediaPipe is ready. -->
+  <div id="model-loading" class="model-loading" role="status" aria-live="polite" aria-label="Loading NailAI vision model">
+    <div class="model-loading-card">
+      <div class="model-loading-orbit" aria-hidden="true">
+        <span></span><span></span><span></span>
+        <div class="model-loading-nail">✦</div>
+      </div>
+      <div class="model-loading-brand">NailAI</div>
+      <h2 id="model-loading-title">Preparing your AI nail assistant</h2>
+      <p id="model-loading-message">Starting camera and vision services…</p>
+      <div class="model-loading-track" aria-hidden="true">
+        <div id="model-loading-progress" class="model-loading-progress"></div>
+      </div>
+      <p id="model-loading-error" class="model-loading-error hidden"></p>
+      <button id="model-loading-continue" class="model-loading-continue hidden" type="button">
+        Continue with image upload
+      </button>
+    </div>
+  </div>
+
   <div class="min-h-screen flex flex-col items-center justify-center px-4">
     <div class="bg-white shadow-xl rounded-2xl p-8 max-w-xl w-full border-t-8 border-blue-500 relative">
 
@@ -150,6 +175,46 @@
 
     const btnToggleHeatmap = document.getElementById("btnToggleHeatmap");
     const btnOpenHeatmap   = document.getElementById("btnOpenHeatmap");
+
+    // ====== Initial model loading overlay ======
+    const modelLoading = document.getElementById("model-loading");
+    const modelLoadingTitle = document.getElementById("model-loading-title");
+    const modelLoadingMessage = document.getElementById("model-loading-message");
+    const modelLoadingProgress = document.getElementById("model-loading-progress");
+    const modelLoadingError = document.getElementById("model-loading-error");
+    const modelLoadingContinue = document.getElementById("model-loading-continue");
+
+    window.__setModelLoadingState = (state, message) => {
+      if (!modelLoading) return;
+
+      if (state === "ready") {
+        modelLoading.classList.add("is-ready");
+        modelLoadingProgress && (modelLoadingProgress.style.width = "100%");
+        modelLoadingTitle && (modelLoadingTitle.textContent = "AI assistant ready");
+        modelLoadingMessage && (modelLoadingMessage.textContent = "You can now capture or upload a nail image.");
+        window.setTimeout(() => modelLoading.classList.add("is-hidden"), 450);
+        return;
+      }
+
+      if (state === "error") {
+        modelLoading.classList.add("has-error");
+        modelLoadingProgress && (modelLoadingProgress.style.width = "35%");
+        modelLoadingTitle && (modelLoadingTitle.textContent = "Camera model could not start");
+        modelLoadingMessage && (modelLoadingMessage.textContent = "You can still use image upload.");
+        modelLoadingError && (modelLoadingError.textContent = message || "Please check camera permission and try again.");
+        modelLoadingError && modelLoadingError.classList.remove("hidden");
+        modelLoadingContinue && modelLoadingContinue.classList.remove("hidden");
+        return;
+      }
+
+      const progressByState = { camera: "28%", vision: "66%", model: "86%" };
+      modelLoadingProgress && (modelLoadingProgress.style.width = progressByState[state] || "18%");
+      if (message && modelLoadingMessage) modelLoadingMessage.textContent = message;
+    };
+
+    modelLoadingContinue?.addEventListener("click", () => {
+      modelLoading?.classList.add("is-hidden");
+    });
 
     // You can optionally add <p id="jobInfo"> in HTML to display job status (if omitted, nothing breaks).
     const jobInfo = document.getElementById("jobInfo");

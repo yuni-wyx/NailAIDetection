@@ -9,10 +9,8 @@ import uuid
 import json
 from datetime import datetime, timezone
 from google.cloud import bigquery
-import os
 
 from backend.app.utils_hierarchical import (
-    init_models,
     hierarchical_predict,
     publish_inference_job,
     get_bq_client,
@@ -51,9 +49,9 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="
 # ---------------- Lifecycle ----------------
 @app.on_event("startup")
 def _startup():
+    # Download the lightweight frontend model before serving the SPA when a
+    # runtime asset URL is configured. Backend inference weights remain lazy.
     ensure_runtime_assets(include_frontend=True)
-    if os.getenv("LOAD_MODELS", "0") == "1":
-        init_models()
 
 # ---------------- Health ----------------
 @app.get("/healthz")
